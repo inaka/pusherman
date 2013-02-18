@@ -62,7 +62,9 @@ handle_info(dequeue,State) ->
   Push = (putils:get_env(backend)):dequeue(),
   case Push of
     {error, queue_empty} -> timer:send_after(?SLEEP_TIME, dequeue);
-    P -> apns:send_message(?APPLE_CONNECTION, P), self() ! dequeue
+    P -> 
+      lager:debug("about to send ~p",[P]),
+      apns:send_message(?APPLE_CONNECTION, P), self() ! dequeue
   end,
   {noreply,State}.
 

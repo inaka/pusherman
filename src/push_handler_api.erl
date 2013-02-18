@@ -46,13 +46,13 @@ handle_push(Req) ->
   {ok, [{JsonParams,_}], _} = cowboy_req:body_qs(Req),
   lager:debug("json: ~p",[JsonParams]),
   [MsgId,DeviceToken,Message,Badge,SoundFileName,Expiration,Extra] = get_params(jsx:decode(JsonParams),[
-    {binary,<<"msg_id">>},
-    {binary,<<"device_token">>},
+    {binary,<<"msg_id">>, apns:message_id()},
+    {string,<<"device_token">>},
     {binary,<<"message">>},
-    {integer,<<"badge">>, 0},
-    {binary,<<"sound_file_name">>},
-    {integer,<<"expiration">>},
-    {binary,<<"extra">>,<<"">>}
+    {integer,<<"badge">>, none},
+    {string,<<"sound_file_name">>, none},
+    {integer,<<"expiration">>, apns:expiry(86400)},
+    {binary,<<"extra">>, []}
   ]),
     Push = #apns_msg{
       id     = MsgId,
