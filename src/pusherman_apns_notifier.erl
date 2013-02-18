@@ -64,6 +64,7 @@ handle_info(dequeue,State) ->
     {error, queue_empty} -> timer:send_after(?SLEEP_TIME, dequeue);
     P -> 
       lager:debug("about to send ~p",[P]),
+      ensure_started(),
       apns:send_message(?APPLE_CONNECTION, P), self() ! dequeue
   end,
   {noreply,State}.
