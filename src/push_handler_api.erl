@@ -44,11 +44,12 @@ handle_unknown(Method,Path) ->
 
 handle_push(Req) -> 
   {ok, [{JsonParams,_}], _} = cowboy_req:body_qs(Req),
-  lager:debug("json: ~p",[JsonParams]),
-  [MsgId,DeviceToken,Message,Badge,SoundFileName,Expiration,Extra] = get_params(jsx:decode(JsonParams),[
+  [Params] = jsx:decode(JsonParams),
+  lager:debug("json: ~p, decoded  ~p",[JsonParams,Params]),
+  [MsgId,DeviceToken,Message,Badge,SoundFileName,Expiration,Extra] = get_params(Params,[
     {binary,<<"msg_id">>, apns:message_id()},
     {string,<<"device_token">>},
-    {binary,<<"message">>},
+    {string,<<"message">>},
     {integer,<<"badge">>, none},
     {string,<<"sound_file_name">>, none},
     {integer,<<"expiration">>, apns:expiry(86400)},
