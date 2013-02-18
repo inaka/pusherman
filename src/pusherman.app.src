@@ -1,0 +1,30 @@
+{application, pusherman,
+ [
+  {description, "A service that accepts, queues, and delivers push notifications."},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  sasl,
+                  compiler,
+                  syntax_tools,
+                  kernel,
+                  eper,
+                  lager,
+                  inets,
+                  crypto,
+                  ssl,
+                  ibrowse,
+                  public_key,
+                  apns,
+                  jsx,
+                  bcrypt,
+                  cowboy,
+                  eunit,
+                  appmon,
+                  gs
+                 ]},
+  {mod, { pusherman_app, []}},
+  {env, []}
+ ]}.

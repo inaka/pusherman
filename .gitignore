@@ -1,0 +1,15 @@
+*.plt
+doc
+ebin
+deps
+.DS_Store
+log
+logs
+erl_crash.dump
+*.beam
+*.swp
+*.swo
+*.swn
+*.log
+all.coverdata
+rel/pusherman
