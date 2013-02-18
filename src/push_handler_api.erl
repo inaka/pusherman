@@ -90,14 +90,14 @@ get_parameter({integer, K, Default}, Qs) ->
     undefined -> Default;
     I when is_integer(I) -> I;
     B when is_binary(B)  -> 
-      conflux_utils:binary_to_integer(B)
+      putils:binary_to_integer(B)
   end;
 get_parameter({string, K, Default}, Qs) ->
   case proplists:get_value(K, Qs) of
     undefined -> Default;
     S when is_list(S) -> S;
     B when is_binary(B)  -> 
-      conflux_utils:to_string(B)
+      putils:to_string(B)
   end;
 get_parameter({start_time, K, Default}, Qs) ->
   case proplists:get_value(K, Qs) of
