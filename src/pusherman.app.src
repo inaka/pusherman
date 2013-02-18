@@ -12,6 +12,7 @@
                   kernel,
                   eper,
                   lager,
+                  lager_syslog,
                   inets,
                   crypto,
                   ssl,
