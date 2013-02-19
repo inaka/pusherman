@@ -68,7 +68,6 @@ handle_push(Req) ->
     device_token = DeviceToken,
     alert  = Message,
     badge  = Badge,
-    sound  = SoundFileName,
     expiry = Expiration,
     extra  = Extra},
   (putils:get_env(backend)):queue(Push),
