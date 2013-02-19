@@ -25,6 +25,7 @@ handle(Req, State) ->
   {Path,_} = cowboy_req:path(Req),
 	
 	{Status, Response} = case {Method,Path} of
+    {<<"GET">>,<<"/status">>} -> handle_status(Req);
     {<<"POST">>,<<"/push">>} -> handle_push(Req);
     _ ->  handle_unknown(Method,Path)
   end,
@@ -41,6 +42,9 @@ terminate(_Reason, _Req, _State) ->
 handle_unknown(Method,Path) ->
   lager:debug("method: ~p path ~p",[Method,Path]),
   {404, list_to_binary(" not found " ++ Path)}.
+
+handle_status(Req) -> 
+  ?OK.
 
 handle_push(Req) -> 
   {ok, [{JsonParams,_}], _} = cowboy_req:body_qs(Req),
