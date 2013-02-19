@@ -65,7 +65,9 @@ handle_info(dequeue,State) ->
     P -> 
       lager:debug("about to send ~p",[P]),
       ensure_started(),
-      apns:send_message(?APPLE_CONNECTION, P), self() ! dequeue
+      apns:send_message(?APPLE_CONNECTION, P), 
+      erlstatsd:increment("pusherman.pushes-sent", 1, 1.0),
+      self() ! dequeue
   end,
   {noreply,State}.
 
@@ -76,7 +78,7 @@ terminate(Reason, _State) ->
 
 %% @hidden
 -spec code_change(term(), state(), term()) -> {ok, state(), pos_integer()}.
-code_change(_OldVsn, State, _Extra) -> {ok, State, inaka:get_env(friend_refresh_interval)}.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Private functions
@@ -95,6 +97,7 @@ ensure_started() ->
       fun handle_apns_error/2,
       fun handle_uninstall/1) of
     {ok, _} ->
+      erlstatsd:increment("pusherman.apns-connected", 1, 1.0),
       lager:info("Connected to apple",[]), ok;
     {error, {already_started, _}} ->
       lager:info("Already connected to apple",[]),
