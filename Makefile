@@ -1,6 +1,6 @@
 CWD=$(shell pwd)
 NAME=pusherman
-APP_DIR=${CWD}/apps/${NAME}
+APP_DIR=${CWD}
 DEPS=$(wildcard ${CWD}/deps/*/ebin)
 APPS=$(wildcard ${CWD}/apps/*/ebin)
 NODE=${NAME}@`hostname`
@@ -83,18 +83,13 @@ shell: compile
 	${ERL} ${ERLARGS} -config ${CWD}/rel/files/sys -s ${NAME}
 
 # Intended to be run by a CI server.
-test: compile #analyze
+ct: compile #analyze
 	@rm -rf ${CT_LOG}
-	@find ${APP_DIR}/src -type f -exec cp {} ${APP_DIR}/ebin \;
-	@find ${APP_DIR}/test -type f -exec cp {} ${APP_DIR}/ebin \;
-	@ERL_FLAGS="${ERLARGS} -config ${CWD}/etc/test" \
-		ERL_AFLAGS="${ERLARGS}" \
-		${REBAR} -v 3 skip_deps=true ct
-	@find ${APP_DIR}/ebin -type f -name "*.erl" -exec rm {} \;
+	${REBAR} -v 3 skip_deps=true ct
 
 # If you're a dev, run this target instead of the one above: it will open
 # the coverage results on your browser.
-devtest: test
+test: ct
 	@open ${CT_LOG}/index.html
 
 
