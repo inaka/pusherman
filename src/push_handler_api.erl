@@ -55,16 +55,20 @@ handle_push(Req) ->
     {integer,<<"expiration">>, apns:expiry(86400)},
     {raw,<<"extra">>, []}
   ]),
-    Push = #apns_msg{
-      id     = MsgId,
-      device_token = DeviceToken,
-      alert  = Message,
-      badge  = Badge,
-      sound  = SoundFileName,
-      expiry = Expiration,
-      extra  = Extra},
-    (putils:get_env(backend)):queue(Push),
-    ?OK.
+  SoundFileName2 = case SoundFileName of
+    "none" -> none;
+    Other -> Other
+  end,
+  Push = #apns_msg{
+    id     = MsgId,
+    device_token = DeviceToken,
+    alert  = Message,
+    badge  = Badge,
+    sound  = SoundFileName,
+    expiry = Expiration,
+    extra  = Extra},
+  (putils:get_env(backend)):queue(Push),
+  ?OK.
 
 %%
 %% Utility functions
