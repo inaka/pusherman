@@ -53,7 +53,7 @@ handle_push(Req) ->
     {integer,<<"badge">>, none},
     {string,<<"sound_file_name">>, none},
     {integer,<<"expiration">>, apns:expiry(86400)},
-    {binary,<<"extra">>, []}
+    {raw,<<"extra">>, []}
   ]),
     Push = #apns_msg{
       id     = MsgId,
@@ -111,4 +111,9 @@ get_parameter({binary, K, Default}, Qs) ->
   case proplists:get_value(K, Qs) of
     X when is_binary(X) -> X;
     _V -> Default
+  end;
+get_parameter({raw, K, Default}, Qs) ->
+  case proplists:get_value(K, Qs) of
+    undefined -> Default;
+    X -> X
   end.
