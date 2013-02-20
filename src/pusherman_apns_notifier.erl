@@ -6,6 +6,7 @@
 
 -behaviour(gen_server).
 -include_lib("apns/include/apns.hrl").
+-include_lib("include/pusherman_types.hrl").
 
 -define(APPLE_CONNECTION, 'apple-connection').
 -define(APPLE_CONNECTION_RESET_TIMEOUT,60 * 60 * 1000).
@@ -63,10 +64,9 @@ handle_info(dequeue,State) ->
   case Push of
     {error, queue_empty} -> timer:send_after(?SLEEP_TIME, dequeue);
     P -> 
-      lager:debug("about to send ~p",[P]),
       ensure_started(),
-      apns:send_message(?APPLE_CONNECTION, P), 
-      erlstatsd:increment("pusherman.pushes-sent", 1, 1.0),
+      apns:send_message(?APPLE_CONNECTION, P#push.push), 
+      erlstatsd:increment("pusherman.pushes-" ++ P#push.type, 1, 1.0),
       self() ! dequeue
   end,
   {noreply,State}.

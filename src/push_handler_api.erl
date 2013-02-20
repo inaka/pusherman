@@ -2,6 +2,7 @@
 -behaviour(cowboy_http_handler).
 
 -include_lib("apns/include/apns.hrl").
+-include_lib("include/pusherman_types.hrl").
 
 -export([init/3, handle/2, terminate/3]).
 
@@ -50,20 +51,21 @@ handle_push(Req) ->
   {ok, [{JsonParams,_}], _} = cowboy_req:body_qs(Req),
   [Params] = jsx:decode(JsonParams),
   lager:debug("json: ~p, decoded  ~p",[JsonParams,Params]),
-  [MsgId,DeviceToken,Message,Badge,SoundFileName,Expiration,Extra] = get_params(Params,[
+  [MsgId,DeviceToken,Message,Badge,SoundFileName,Expiration,Extra,Type] = get_params(Params,[
     {binary,<<"msg_id">>, apns:message_id()},
     {string,<<"device_token">>},
     {string,<<"message">>},
     {integer,<<"badge">>, none},
     {string,<<"sound_file_name">>, none},
     {integer,<<"expiration">>, apns:expiry(86400)},
-    {raw,<<"extra">>, []}
+    {raw,<<"extra">>, []},
+    {string,<<"push_type">>,"unknown"}
   ]),
   SoundFileName2 = case SoundFileName of
     "none" -> none;
     Other -> Other
   end,
-  Push = #apns_msg{
+  Msg = #apns_msg{
     id     = MsgId,
     device_token = DeviceToken,
     alert  = Message,
@@ -71,6 +73,9 @@ handle_push(Req) ->
     sound  = SoundFileName2,
     expiry = Expiration,
     extra  = Extra},
+  Push = #push{
+    type=Type,
+    push=Msg},
   (putils:get_env(backend)):queue(Push),
   ?OK.
 
