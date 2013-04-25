@@ -15,7 +15,6 @@
                   inets,
                   crypto,
                   ssl,
-                  ibrowse,
                   public_key,
                   apns,
                   jsx,
