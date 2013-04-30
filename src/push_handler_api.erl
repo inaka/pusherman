@@ -51,7 +51,7 @@ handle_push(Req) ->
   {ok, [{JsonParams,_}], _} = cowboy_req:body_qs(Req),
   [Params] = jsx:decode(JsonParams),
   lager:debug("json: ~p, decoded  ~p",[JsonParams,Params]),
-  [MsgId,DeviceToken,Message,Badge,SoundFileName,Expiration,Extra,Type,Callback] = get_params(Params,[
+  [MsgId,DeviceToken,Message,Badge,SoundFileName,Expiration,Extra,Type] = get_params(Params,[
     {binary,<<"msg_id">>, apns:message_id()},
     {string,<<"device_token">>},
     {string,<<"message">>},
@@ -59,8 +59,7 @@ handle_push(Req) ->
     {string,<<"sound_file_name">>, none},
     {integer,<<"expiration">>, apns:expiry(86400)},
     {raw,<<"extra">>, []},
-    {string,<<"push_type">>,"unknown"},
-    {string, <<"callback">>, "undefined"}
+    {string,<<"push_type">>,"unknown"}
   ]),
   SoundFileName2 = case SoundFileName of
     "none" -> none;
@@ -76,8 +75,7 @@ handle_push(Req) ->
     extra  = Extra},
   Push = #push{
     type=Type,
-    push=Msg,
-    callback=Callback},
+    push=Msg},
   (putils:get_env(backend)):queue(Push),
   ?OK.
 

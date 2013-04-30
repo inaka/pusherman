@@ -11,8 +11,6 @@
 -define(APPLE_CONNECTION, 'apple-connection').
 -define(APPLE_CONNECTION_RESET_TIMEOUT,60 * 60 * 1000).
 -define(SLEEP_TIME, 1000).
--define(PUSH_TABLE, pushes).
--define(MAX_PUSHES, 10000).
 
 -export([start_link/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -43,7 +41,6 @@ init(_) ->
   catch
     _:Error -> lager:error("error initializing apns: ~p~n.",[Error])
   end,
-  ets:new(?PUSH_TABLE, [ordered_set, public, named_table]),
   {ok,_} = timer:send_interval(?APPLE_CONNECTION_RESET_TIMEOUT, self(), reset_connection),
   timer:send_after(?SLEEP_TIME, dequeue),
   {ok, #state{}, hibernate}.
@@ -53,15 +50,7 @@ init(_) ->
 handle_call(X, _From, State) ->
   {stop, {unknown_request, X}, {unknown_request, X}, State}.
 
-handle_cast({error, MsgId, Status}, State) ->
-  case ets:lookup(?PUSH_TABLE, MsgId) of
-    [] -> nothing_to_do;
-    [{MsgId, BinaryPush}] ->
-      return_status(binary_to_term(BinaryPush), putils:safe_term_to_binary(Status)),
-      ets:delete(?PUSH_TABLE, MsgId)
-  end,
-  {noreply, State};
-handle_cast(_, State) ->
+handle_cast(_,State) -> 
   {noreply, State}.
 
 %% @hidden
@@ -76,7 +65,6 @@ handle_info(dequeue,State) ->
     {error, queue_empty} -> timer:send_after(?SLEEP_TIME, dequeue);
     P -> 
       ensure_started(),
-      save_push(P),
       apns:send_message(?APPLE_CONNECTION, P#push.push), 
       erlstatsd:increment("pusherman.pushes-" ++ P#push.type, 1, 1.0),
       self() ! dequeue
@@ -100,8 +88,8 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 handle_apns_error(MsgId, Status) ->
   gen_server:cast(?MODULE, {error, MsgId, Status}).
 
-handle_uninstall(Msg) ->
-  gen_server:cast(?MODULE, Msg).
+handle_uninstall({_,ApnsToken}) ->
+  whisper_user:delete_apns_token(ApnsToken).
 
 -spec ensure_started() -> ok.
 ensure_started() ->
@@ -139,18 +127,3 @@ do_send(ApnsToken,Message,SoundFileName,Expiration,Extra,Type) ->
       lager:debug("error ~p sending: ~p with message ~p. response: ~p type: ~p", [Error, Message,Type])
   end.
 
-save_push(Push) ->
-  %% Delete the oldest push if the table is full
-  case proplists:get_value(size, ets:info(?PUSH_TABLE)) of
-    Size when Size == ?MAX_PUSHES ->
-      ets:delete(?PUSH_TABLE, ets:first(?PUSH_TABLE));
-    _ -> nothing_to_do
-  end,
-  ets:insert(?PUSH_TABLE, {Push#push.push#apns_msg.id, term_to_binary(Push)}).
-
-return_status(#push{callback="undefined"}, _) -> nothing_to_do;
-return_status(#push{callback=Callback, push=ApnsMsg}, Status) ->
-  Data = jsx:encode([{<<"device_token">>, list_to_binary(ApnsMsg#apns_msg.device_token)},
-                     {<<"status">>, Status}]),
-  Request = {Callback, [], "application/json", Data},
-  httpc:request(post, Request, [], []).
