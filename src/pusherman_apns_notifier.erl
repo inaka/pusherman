@@ -54,12 +54,23 @@ handle_call(X, _From, State) ->
   {stop, {unknown_request, X}, {unknown_request, X}, State}.
 
 handle_cast({error, MsgId, Status}, State) ->
-  lager:error("error ~p ~p",[MsgId, Status]),
-  case ets:lookup(?PUSH_TABLE, MsgId) of
+  case ets:match(?PUSH_TABLE,{{MsgId,'_'},'$1'}) of
     [] -> nothing_to_do;
-    [{MsgId, BinaryPush}] ->
-      return_status(binary_to_term(BinaryPush), putils:safe_term_to_binary(Status)),
-      ets:delete(?PUSH_TABLE, MsgId)
+    Items ->
+      lists:foreach(fun([BinaryPush]) -> 
+        return_status(binary_to_term(BinaryPush), putils:safe_term_to_binary(Status)),
+        ets:match_delete(?PUSH_TABLE,{{MsgId,'_'},'$1'})
+        end,Items)
+  end,
+  {noreply, State};
+handle_cast({uninstall, Token, Status}, State) ->
+  case ets:match(?PUSH_TABLE,{{'_',Token},'$1'}) of
+    [] -> nothing_to_do;
+    Items ->
+      lists:foreach(fun([BinaryPush]) -> 
+        return_status(binary_to_term(BinaryPush), putils:safe_term_to_binary(Status)),
+        ets:match_delete(?PUSH_TABLE,{{'_',Token},'$1'})
+        end,Items)
   end,
   {noreply, State};
 handle_cast(_, State) ->
@@ -99,10 +110,12 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 -spec handle_apns_error(binary(), apns:status()) -> ok.
 handle_apns_error(MsgId, Status) ->
+  lager:debug("handle_apns_error ~p ~p",[MsgId, Status]),
   gen_server:cast(?MODULE, {error, MsgId, Status}).
 
-handle_uninstall(Msg) ->
-  gen_server:cast(?MODULE, Msg).
+handle_uninstall({_,Token}) ->
+  lager:debug("handle_uninstall ~p",[Token]),
+  gen_server:cast(?MODULE, {uninstall, Token, <<"invalid_token">>}).
 
 -spec ensure_started() -> ok.
 ensure_started() ->
@@ -147,7 +160,7 @@ save_push(Push) ->
       ets:delete(?PUSH_TABLE, ets:first(?PUSH_TABLE));
     _ -> nothing_to_do
   end,
-  ets:insert(?PUSH_TABLE, {Push#push.push#apns_msg.id, term_to_binary(Push)}).
+  ets:insert(?PUSH_TABLE, {{Push#push.push#apns_msg.id,Push#push.push#apns_msg.device_token}, term_to_binary(Push)}).
 
 return_status(#push{callback="undefined"}, _) -> nothing_to_do;
 return_status(#push{callback=Callback, push=ApnsMsg}, Status) ->
