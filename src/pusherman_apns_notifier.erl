@@ -54,6 +54,7 @@ handle_call(X, _From, State) ->
   {stop, {unknown_request, X}, {unknown_request, X}, State}.
 
 handle_cast({error, MsgId, Status}, State) ->
+  lager:error("error ~p ~p",[MsgId, Status]),
   case ets:lookup(?PUSH_TABLE, MsgId) of
     [] -> nothing_to_do;
     [{MsgId, BinaryPush}] ->
@@ -150,6 +151,7 @@ save_push(Push) ->
 
 return_status(#push{callback="undefined"}, _) -> nothing_to_do;
 return_status(#push{callback=Callback, push=ApnsMsg}, Status) ->
+  lager:debug("return status ~p ~p",[Callback,ApnsMsg]),
   Data = jsx:encode([{<<"device_token">>, list_to_binary(ApnsMsg#apns_msg.device_token)},
                      {<<"status">>, Status}]),
   Request = {Callback, [], "application/json", Data},
