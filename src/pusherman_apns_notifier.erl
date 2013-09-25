@@ -115,8 +115,7 @@ handle_apns_error(MsgId, Status) ->
 
 handle_uninstall({Date,Token}) ->
   lager:warning("handle_uninstall ~p - ~p ",[Date,Token]),
-  %gen_server:cast(?MODULE, {uninstall, Token, <<"invalid_token">>}).
-  ok.
+  gen_server:cast(?MODULE, {uninstall, Token, <<"invalid_token">>}).
 
 -spec ensure_started() -> ok.
 ensure_started() ->
