@@ -62,7 +62,7 @@ handle_push(Req) ->
     {integer, <<"expiration">>, apns:expiry(86400)},
     {raw, <<"extra">>, []},
     {string, <<"push_type">>,"unknown"},
-   {string, <<"callback">>, "undefined"}
+    {string, <<"callback">>, "undefined"}
   ]),
   SoundFileName2 = case SoundFileName of
     "none" -> none;
@@ -71,7 +71,8 @@ handle_push(Req) ->
   LocalizedMessage = case ActionLocKey of
     none -> Message;
     JsonStruct ->
-      [Action, Key, Args, Image] = get_params(JsonStruct, [
+      JsonContent = jsx:decode(unicode:characters_to_binary(JsonStruct)),
+      [Action, Key, Args, Image] = get_params(JsonContent, [
         {string, <<"action">>, none},
         {string, <<"key">>, none},
         {list, <<"args">>, []},
@@ -111,6 +112,12 @@ get_parameter({T,K}, Qs) ->
   case get_parameter({T,K,undefined}, Qs) of
     undefined -> throw({missing_parameter, K});
     V -> V
+  end;
+get_parameter({list, K, Default}, Qs) ->
+  case proplists:get_value(K, Qs) of
+    undefined -> Default;
+    L when is_list(L) -> L;
+    _V -> Default
   end;
 get_parameter({boolean, K, Default}, Qs) ->
   case proplists:get_value(K, Qs) of
