@@ -22,7 +22,7 @@
 
 -record(state, { backend :: term(), db :: term()}).
 -type state() :: #state{ backend :: term(), 
-                        db :: term()}.
+  db :: term()}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Public API
@@ -58,8 +58,8 @@ handle_cast({error, MsgId, Status}, State) ->
     [] -> nothing_to_do;
     Items ->
       lists:foreach(fun([BinaryPush]) -> 
-        return_status(binary_to_term(BinaryPush), putils:safe_term_to_binary(Status)),
-        ets:match_delete(?PUSH_TABLE,{{MsgId,'_'},'$1'})
+            return_status(binary_to_term(BinaryPush), putils:safe_term_to_binary(Status)),
+            ets:match_delete(?PUSH_TABLE,{{MsgId,'_'},'$1'})
         end,Items)
   end,
   {noreply, State};
@@ -68,8 +68,8 @@ handle_cast({uninstall, Token, Status}, State) ->
     [] -> nothing_to_do;
     Items ->
       lists:foreach(fun([BinaryPush]) -> 
-        return_status(binary_to_term(BinaryPush), putils:safe_term_to_binary(Status)),
-        ets:match_delete(?PUSH_TABLE,{{'_',Token},'$1'})
+            return_status(binary_to_term(BinaryPush), putils:safe_term_to_binary(Status)),
+            ets:match_delete(?PUSH_TABLE,{{'_',Token},'$1'})
         end,Items)
   end,
   {noreply, State};
@@ -83,16 +83,18 @@ handle_info(reset_connection,State) ->
   {noreply,State};
 
 handle_info(dequeue,State) ->
-  Push = (putils:get_env(backend)):dequeue(),
-  case Push of
-    {error, queue_empty} -> timer:send_after(?SLEEP_TIME, dequeue);
-    P -> 
-      ensure_started(),
-      save_push(P),
-      apns:send_message(?APPLE_CONNECTION, P#push.push), 
-      erlstatsd:increment("pusherman.pushes-" ++ P#push.type, 1, 1.0),
-      self() ! dequeue
-  end,
+  spawn(fun() -> 
+        Push = (putils:get_env(backend)):dequeue(),
+        case Push of
+          {error, queue_empty} -> timer:send_after(?SLEEP_TIME, dequeue);
+          P -> 
+            ensure_started(),
+            save_push(P),
+            apns:send_message(?APPLE_CONNECTION, P#push.push), 
+            erlstatsd:increment("pusherman.pushes-" ++ P#push.type, 1, 1.0),
+            self() ! dequeue
+        end
+    end),
   {noreply,State}.
 
 %% @hidden
@@ -140,32 +142,32 @@ ensure_started() ->
         throw({error,apns_error})
     end.
 
-do_send(ApnsToken,Message,SoundFileName,Expiration,Extra,Type) -> 
-  try
-    ensure_started(),
-    MsgId = apns:message_id(),
-    Response = apns:send_message(?APPLE_CONNECTION, MsgId, binary_to_list(ApnsToken), Message, 1,
-      SoundFileName,
-      apns:expiry(Expiration), Extra), 
-    lager:debug("notifier sent message_id: ~p with message ~p. response: ~p type: ~p", [MsgId, Message,Response,Type])
-  catch
-    _:Error ->
-      lager:debug("error ~p sending: ~p with message ~p. response: ~p type: ~p", [Error, Message,Type])
-  end.
+  do_send(ApnsToken,Message,SoundFileName,Expiration,Extra,Type) -> 
+    try
+      ensure_started(),
+      MsgId = apns:message_id(),
+      Response = apns:send_message(?APPLE_CONNECTION, MsgId, binary_to_list(ApnsToken), Message, 1,
+        SoundFileName,
+        apns:expiry(Expiration), Extra), 
+      lager:debug("notifier sent message_id: ~p with message ~p. response: ~p type: ~p", [MsgId, Message,Response,Type])
+    catch
+      _:Error ->
+        lager:debug("error ~p sending: ~p with message ~p. response: ~p type: ~p", [Error, Message,Type])
+    end.
 
-save_push(Push) ->
-  %% Delete the oldest push if the table is full
-  case proplists:get_value(size, ets:info(?PUSH_TABLE)) of
-    Size when Size == ?MAX_PUSHES ->
-      ets:delete(?PUSH_TABLE, ets:first(?PUSH_TABLE));
-    _ -> nothing_to_do
-  end,
-  ets:insert(?PUSH_TABLE, {{Push#push.push#apns_msg.id,Push#push.push#apns_msg.device_token}, term_to_binary(Push)}).
+  save_push(Push) ->
+    %% Delete the oldest push if the table is full
+    case proplists:get_value(size, ets:info(?PUSH_TABLE)) of
+      Size when Size == ?MAX_PUSHES ->
+        ets:delete(?PUSH_TABLE, ets:first(?PUSH_TABLE));
+      _ -> nothing_to_do
+    end,
+    ets:insert(?PUSH_TABLE, {{Push#push.push#apns_msg.id,Push#push.push#apns_msg.device_token}, term_to_binary(Push)}).
 
-return_status(#push{callback="undefined"}, _) -> nothing_to_do;
-return_status(#push{callback=Callback, push=ApnsMsg}, Status) ->
-  lager:debug("return status ~p ~p",[Callback,ApnsMsg]),
-  Data = jsx:encode([{<<"device_token">>, list_to_binary(ApnsMsg#apns_msg.device_token)},
-                     {<<"status">>, Status}]),
-  Request = {Callback, [], "application/json", Data},
-  httpc:request(post, Request, [], []).
+  return_status(#push{callback="undefined"}, _) -> nothing_to_do;
+  return_status(#push{callback=Callback, push=ApnsMsg}, Status) ->
+    lager:debug("return status ~p ~p",[Callback,ApnsMsg]),
+    Data = jsx:encode([{<<"device_token">>, list_to_binary(ApnsMsg#apns_msg.device_token)},
+        {<<"status">>, Status}]),
+    Request = {Callback, [], "application/json", Data},
+    httpc:request(post, Request, [], []).
