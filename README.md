@@ -4,6 +4,16 @@
 
 The idea with pusherman is you want to abstract away the calls to apple and queue up your pushes. Say you have a lot of pushes and want to manage connections to apple, etc. The goal is for this to be the place to do that. We'll add some graphical UI and statsd support so you can track how things are going.
 
+Contact Us
+==========
+
+For **questions** or **general comments** regarding the use of this library, please use our public
+[hipchat room](https://www.hipchat.com/gpBpW3SsT).
+
+If you find any **bugs** or have a **problem** while using this library, please [open an issue](https://github.com/inaka/pusherman/issues/new) in this repo (or a pull request :)).
+
+And you can check all of our open-source projects at [inaka.github.io](http://inaka.github.io)
+
 
 Todo
 ====
