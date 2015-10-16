@@ -1,3 +1,8 @@
+# NOTICE
+**This project is not supported anymore.**
+It's still here just to support legacy projects that may have it as a dependency.
+It's operational (at least, for Erlang versions lower than R17)
+
 1. Pusherman
 
 1. Pusherman is an Erlang service that accepts and delivers push notifications, currently for Apple. It uses apns4erl but it provides a UDP and HTTP interface for pushes, and queues them. It has a pluggable queue backend so you can queue pushes in whatever system you want. Currently it uses leveldb but will eventually support Redis and Rabbit.
